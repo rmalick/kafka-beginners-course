@@ -11,11 +11,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Properties;
 
 import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
-import static org.apache.kafka.clients.producer.ProducerConfig.*;
+import static org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG;
 
-public class ProducerDemoWillCallback {
+public class ProducerDemoKeys {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProducerDemoWillCallback.class.getSimpleName());
+    private static final Logger logger = LoggerFactory.getLogger(ProducerDemoKeys.class.getSimpleName());
 
     public static void main(String[] args) {
         logger.info("Hello, Kafka Producer with callback Demo!");
@@ -25,24 +26,24 @@ public class ProducerDemoWillCallback {
         properties.setProperty(BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         properties.setProperty(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.setProperty(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        properties.setProperty(BATCH_SIZE_CONFIG, "40");
+
         // create the producer
         try (Producer<String, String> producer = new KafkaProducer<>(properties)) {
             //create a producer record
 
-            for (int j = 0; j < 5; j++) {
+            String topic = "demo_topic";
+            for (int j = 0; j < 2; j++) {
+                logger.info("Key\t   Partition \t message");
                 for (int i = 0; i < 5; i++) {
                     //send data
-                    ProducerRecord<String, String> producerRecord = new ProducerRecord<>("second_topic", "value" + j + "_" + i);
+                    String key = "id_" + i;
+                    String value = "Hello world " + i;
+                    ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, key, value);
 
-                    int finalI = i;
                     producer.send(producerRecord, (metadata, exception) -> {
-                        if (finalI == 0)
-                            logger.info("Topic\t   Partition\t Offset\t    Timestamp \t message");
                         if (exception == null) {
                             // the record was successfully sent
-                            logger.info("{}\t{}\t\t  {}\t{}\t{}",
-                                    metadata.topic(), metadata.partition(), metadata.offset(), metadata.timestamp(), producerRecord.value());
+                            logger.info("{}\t{}\t{}", key, metadata.partition(), producerRecord.value());
                         } else {
                             // an error occurred
                             logger.error("Error while producing", exception);
@@ -50,11 +51,9 @@ public class ProducerDemoWillCallback {
                     });
                 }
 
-                Thread.sleep(5);
+                Thread.sleep(5000);
             }
 
-
-            producer.flush();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
